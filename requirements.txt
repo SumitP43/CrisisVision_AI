@@ -1,0 +1,33 @@
+# AEGIS — AI Disaster Management System
+# Python Dependencies
+
+# Web Framework
+flask==3.0.0
+flask-cors==4.0.0
+
+# AI / Machine Learning
+scikit-learn==1.4.0
+numpy==1.26.3
+pandas==2.1.4
+joblib==1.3.2
+
+# Data Visualization (optional backend)
+matplotlib==3.8.2
+seaborn==0.13.1
+
+# HTTP Requests
+requests==2.31.0
+
+# Database
+# SQLite is built into Python — no install needed
+
+# Environment variables
+python-dotenv==1.0.0
+
+# Alert System (optional)
+twilio==8.11.0        # SMS alerts
+sendgrid==6.11.0      # Email alerts
+
+# Utilities
+pillow==10.2.0        # Image processing for uploaded disaster photos
+werkzeug==3.0.1       # File upload handling

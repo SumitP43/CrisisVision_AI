@@ -1,0 +1,1923 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AEGIS — AI Disaster Management System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=DM+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+/* ═══════════════════════════════════════════════
+   DESIGN SYSTEM — AEGIS
+   Color: Deep Navy + Emergency Red + Cyan Accent
+   ═══════════════════════════════════════════════ */
+:root {
+  --bg-primary: #050c1a;
+  --bg-secondary: #090f1f;
+  --bg-card: #0d1526;
+  --bg-card-hover: #111d35;
+  --border: rgba(0,168,255,0.15);
+  --border-bright: rgba(0,168,255,0.4);
+  --cyan: #00a8ff;
+  --cyan-dim: rgba(0,168,255,0.6);
+  --red: #ff2d4a;
+  --red-dim: rgba(255,45,74,0.6);
+  --orange: #ff7b00;
+  --green: #00e57b;
+  --yellow: #ffd600;
+  --text-primary: #e8f4ff;
+  --text-secondary: #7a9bb5;
+  --text-muted: #3d5a72;
+  --glow-cyan: 0 0 20px rgba(0,168,255,0.3);
+  --glow-red: 0 0 20px rgba(255,45,74,0.4);
+  --font-display: 'Orbitron', monospace;
+  --font-body: 'DM Sans', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  --nav-height: 64px;
+  --sidebar-width: 240px;
+}
+[data-theme="light"] {
+  --bg-primary: #f0f4fb;
+  --bg-secondary: #e4ecf7;
+  --bg-card: #ffffff;
+  --bg-card-hover: #f5f9ff;
+  --border: rgba(0,100,200,0.15);
+  --border-bright: rgba(0,100,200,0.4);
+  --text-primary: #0a1628;
+  --text-secondary: #3a5a7a;
+  --text-muted: #8aabcc;
+  --glow-cyan: 0 2px 12px rgba(0,100,200,0.15);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: var(--font-body);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  min-height: 100vh;
+  overflow-x: hidden;
+  transition: background 0.3s, color 0.3s;
+}
+
+/* ═══════ SCROLLBAR ═══════ */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg-secondary); }
+::-webkit-scrollbar-thumb { background: var(--border-bright); border-radius: 3px; }
+
+/* ═══════ ALERT BANNER ═══════ */
+#alert-banner {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 9999;
+  background: linear-gradient(90deg, #ff2d4a, #ff7b00, #ff2d4a);
+  background-size: 200% 100%;
+  animation: bannerScroll 3s linear infinite;
+  color: white; font-size: 13px; font-family: var(--font-mono);
+  padding: 8px 0; text-align: center; letter-spacing: 0.05em;
+  border-bottom: 1px solid rgba(255,255,255,0.2);
+}
+@keyframes bannerScroll { 0%{background-position:0%} 100%{background-position:200%} }
+#alert-banner .ticker { display: inline-block; animation: ticker 30s linear infinite; white-space: nowrap; }
+@keyframes ticker { from{transform:translateX(100vw)} to{transform:translateX(-100%)} }
+
+/* ═══════ TOPNAV ═══════ */
+#topnav {
+  position: fixed; top: 36px; left: 0; right: 0; z-index: 1000;
+  height: var(--nav-height);
+  background: rgba(5,12,26,0.92);
+  border-bottom: 1px solid var(--border);
+  backdrop-filter: blur(20px);
+  display: flex; align-items: center; padding: 0 24px; gap: 0;
+}
+[data-theme="light"] #topnav { background: rgba(240,244,251,0.92); }
+.nav-logo {
+  font-family: var(--font-display);
+  font-size: 20px; font-weight: 900;
+  color: var(--cyan); letter-spacing: 0.12em;
+  display: flex; align-items: center; gap: 10px; margin-right: 40px;
+  text-shadow: var(--glow-cyan);
+}
+.nav-logo .logo-icon {
+  width: 34px; height: 34px; border-radius: 8px;
+  background: linear-gradient(135deg, var(--cyan), #0060ff);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; box-shadow: var(--glow-cyan);
+}
+.nav-links { display: flex; gap: 4px; flex: 1; }
+.nav-link {
+  padding: 8px 16px; border-radius: 8px;
+  font-size: 13px; font-weight: 500; cursor: pointer;
+  color: var(--text-secondary); border: none; background: none;
+  transition: all 0.2s; letter-spacing: 0.02em;
+  display: flex; align-items: center; gap: 7px;
+  font-family: var(--font-body);
+}
+.nav-link:hover { color: var(--text-primary); background: var(--bg-card); }
+.nav-link.active { color: var(--cyan); background: rgba(0,168,255,0.1); }
+.nav-link .nav-icon { font-size: 15px; }
+.nav-right { display: flex; align-items: center; gap: 12px; margin-left: auto; }
+.theme-toggle {
+  width: 38px; height: 38px; border-radius: 50%;
+  background: var(--bg-card); border: 1px solid var(--border);
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  font-size: 16px; transition: all 0.2s; color: var(--text-primary);
+}
+.theme-toggle:hover { border-color: var(--cyan); box-shadow: var(--glow-cyan); }
+.status-indicator {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 12px; font-family: var(--font-mono);
+  color: var(--green); background: rgba(0,229,123,0.08);
+  padding: 6px 12px; border-radius: 20px; border: 1px solid rgba(0,229,123,0.2);
+}
+.pulse-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: currentColor; animation: pulse 1.5s ease infinite;
+}
+@keyframes pulse { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.4);opacity:0.6} }
+.btn-login {
+  padding: 8px 18px; border-radius: 8px; font-size: 13px; font-weight: 600;
+  background: linear-gradient(135deg, var(--cyan), #0060ff);
+  color: white; border: none; cursor: pointer; transition: all 0.2s;
+  font-family: var(--font-body);
+}
+.btn-login:hover { transform: translateY(-1px); box-shadow: var(--glow-cyan); }
+
+/* ═══════ MAIN LAYOUT ═══════ */
+#app {
+  margin-top: calc(var(--nav-height) + 36px);
+  min-height: calc(100vh - var(--nav-height) - 36px);
+}
+.page { display: none; padding: 32px 24px; max-width: 1400px; margin: 0 auto; }
+.page.active { display: block; animation: fadeIn 0.3s ease; }
+@keyframes fadeIn { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+.page-title {
+  font-family: var(--font-display); font-size: 26px; font-weight: 700;
+  color: var(--text-primary); margin-bottom: 6px; letter-spacing: 0.05em;
+}
+.page-subtitle { color: var(--text-secondary); font-size: 14px; margin-bottom: 28px; }
+
+/* ═══════ CARDS ═══════ */
+.card {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: 16px; padding: 20px;
+  transition: all 0.25s; position: relative; overflow: hidden;
+}
+.card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, var(--cyan), transparent);
+  opacity: 0; transition: opacity 0.25s;
+}
+.card:hover { border-color: var(--border-bright); transform: translateY(-2px); box-shadow: var(--glow-cyan); }
+.card:hover::before { opacity: 1; }
+.card.danger { border-color: rgba(255,45,74,0.3); }
+.card.danger::before { background: linear-gradient(90deg, var(--red), transparent); opacity: 1; }
+.card.warning { border-color: rgba(255,123,0,0.3); }
+.card.warning::before { background: linear-gradient(90deg, var(--orange), transparent); opacity: 1; }
+.card.success { border-color: rgba(0,229,123,0.3); }
+.card.success::before { background: linear-gradient(90deg, var(--green), transparent); opacity: 1; }
+.card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+.card-title { font-size: 13px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.08em; }
+.card-icon { font-size: 20px; }
+.card-value { font-family: var(--font-display); font-size: 32px; font-weight: 700; color: var(--text-primary); }
+.card-unit { font-size: 14px; color: var(--text-secondary); margin-left: 4px; }
+.card-trend { font-size: 12px; font-family: var(--font-mono); margin-top: 6px; }
+.trend-up { color: var(--red); } .trend-down { color: var(--green); } .trend-flat { color: var(--text-secondary); }
+
+/* ═══════ GRID LAYOUTS ═══════ */
+.grid-4 { display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; margin-bottom: 20px; }
+.grid-3 { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; margin-bottom: 20px; }
+.grid-2 { display: grid; grid-template-columns: repeat(2,1fr); gap: 16px; margin-bottom: 20px; }
+.grid-2-1 { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; margin-bottom: 20px; }
+@media(max-width:1100px){.grid-4{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:700px){.grid-4,.grid-3,.grid-2,.grid-2-1{grid-template-columns:1fr}}
+
+/* ═══════ RISK BADGE ═══════ */
+.risk-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 12px; border-radius: 20px; font-size: 12px;
+  font-weight: 700; font-family: var(--font-mono); letter-spacing: 0.05em;
+}
+.risk-low { background: rgba(0,229,123,0.12); color: var(--green); border: 1px solid rgba(0,229,123,0.3); }
+.risk-medium { background: rgba(255,214,0,0.12); color: var(--yellow); border: 1px solid rgba(255,214,0,0.3); }
+.risk-high { background: rgba(255,123,0,0.12); color: var(--orange); border: 1px solid rgba(255,123,0,0.3); }
+.risk-critical { background: rgba(255,45,74,0.12); color: var(--red); border: 1px solid rgba(255,45,74,0.3); animation: riskPulse 1s ease infinite; }
+@keyframes riskPulse { 0%,100%{box-shadow:0 0 0 rgba(255,45,74,0.4)} 50%{box-shadow:0 0 12px rgba(255,45,74,0.4)} }
+
+/* ═══════ HOME PAGE ═══════ */
+.hero-section {
+  background: linear-gradient(135deg, var(--bg-card), rgba(0,168,255,0.05));
+  border: 1px solid var(--border);
+  border-radius: 20px; padding: 36px;
+  margin-bottom: 24px;
+  position: relative; overflow: hidden;
+}
+.hero-section::after {
+  content: ''; position: absolute; right: -60px; top: -60px;
+  width: 300px; height: 300px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(0,168,255,0.08) 0%, transparent 70%);
+}
+.hero-section::before {
+  content: ''; position: absolute; bottom: -40px; left: 40%;
+  width: 200px; height: 200px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,45,74,0.06) 0%, transparent 70%);
+}
+.hero-top { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px; }
+.hero-title { font-family: var(--font-display); font-size: 36px; font-weight: 900; line-height: 1.1; }
+.hero-title span { color: var(--cyan); }
+.hero-meta { color: var(--text-secondary); font-size: 14px; margin-top: 8px; display: flex; align-items: center; gap: 8px; }
+.hero-metrics { display: flex; gap: 32px; flex-wrap: wrap; margin-top: 24px; }
+.hero-metric { text-align: center; }
+.hero-metric .val { font-family: var(--font-display); font-size: 28px; font-weight: 700; }
+.hero-metric .lbl { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+.hero-metric.red .val { color: var(--red); }
+.hero-metric.cyan .val { color: var(--cyan); }
+.hero-metric.green .val { color: var(--green); }
+.hero-metric.orange .val { color: var(--orange); }
+
+/* ═══════ WEATHER STRIP ═══════ */
+.weather-strip {
+  display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 24px;
+}
+.weather-chip {
+  flex: 1; min-width: 120px; background: var(--bg-card);
+  border: 1px solid var(--border); border-radius: 12px;
+  padding: 14px 16px; display: flex; align-items: center; gap: 12px;
+  transition: all 0.2s;
+}
+.weather-chip:hover { border-color: var(--cyan-dim); }
+.weather-chip .wc-icon { font-size: 24px; }
+.weather-chip .wc-val { font-family: var(--font-display); font-size: 18px; font-weight: 700; }
+.weather-chip .wc-lbl { font-size: 11px; color: var(--text-secondary); margin-top: 2px; }
+
+/* ═══════ ALERTS LIST ═══════ */
+.alert-item {
+  display: flex; align-items: flex-start; gap: 14px;
+  padding: 14px; border-radius: 12px; margin-bottom: 10px;
+  border-left: 3px solid;
+  background: var(--bg-card); border-top: 1px solid var(--border);
+  border-right: 1px solid var(--border); border-bottom: 1px solid var(--border);
+  transition: all 0.2s; cursor: pointer;
+}
+.alert-item:hover { transform: translateX(4px); }
+.alert-item.critical { border-left-color: var(--red); background: rgba(255,45,74,0.04); }
+.alert-item.warning { border-left-color: var(--orange); background: rgba(255,123,0,0.04); }
+.alert-item.medium { border-left-color: var(--yellow); background: rgba(255,214,0,0.04); }
+.alert-item.info { border-left-color: var(--cyan); background: rgba(0,168,255,0.04); }
+.alert-icon { font-size: 22px; flex-shrink: 0; margin-top: 2px; }
+.alert-title { font-size: 14px; font-weight: 600; margin-bottom: 3px; }
+.alert-desc { font-size: 12px; color: var(--text-secondary); }
+.alert-time { font-size: 11px; font-family: var(--font-mono); color: var(--text-muted); margin-left: auto; white-space: nowrap; }
+
+/* ═══════ EMERGENCY BUTTONS ═══════ */
+.emergency-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 24px; }
+@media(max-width:700px){.emergency-grid{grid-template-columns:repeat(2,1fr)}}
+.emergency-btn {
+  padding: 16px 12px; border-radius: 14px; border: 1px solid;
+  cursor: pointer; text-align: center; transition: all 0.2s;
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  font-family: var(--font-body); font-weight: 600; font-size: 13px;
+  position: relative; overflow: hidden;
+}
+.emergency-btn::after { content:''; position:absolute; inset:0; opacity:0; transition:opacity 0.2s; border-radius:inherit; }
+.emergency-btn:hover { transform: translateY(-3px); }
+.emergency-btn:hover::after { opacity:1; }
+.emergency-btn .eb-icon { font-size: 28px; }
+.eb-fire { background:rgba(255,45,74,0.08);border-color:rgba(255,45,74,0.3);color:var(--red); }
+.eb-fire::after { background:rgba(255,45,74,0.05); }
+.eb-fire:hover { box-shadow: 0 8px 24px rgba(255,45,74,0.3); }
+.eb-police { background:rgba(0,96,255,0.08);border-color:rgba(0,96,255,0.3);color:#4d94ff; }
+.eb-police:hover { box-shadow: 0 8px 24px rgba(0,96,255,0.3); }
+.eb-medical { background:rgba(0,229,123,0.08);border-color:rgba(0,229,123,0.3);color:var(--green); }
+.eb-medical:hover { box-shadow: 0 8px 24px rgba(0,229,123,0.3); }
+.eb-evacuation { background:rgba(255,123,0,0.08);border-color:rgba(255,123,0,0.3);color:var(--orange); }
+.eb-evacuation:hover { box-shadow: 0 8px 24px rgba(255,123,0,0.3); }
+
+/* ═══════ PROGRESS BARS ═══════ */
+.progress-bar { height: 8px; border-radius: 4px; background: var(--bg-primary); overflow: hidden; margin-top: 6px; }
+.progress-fill { height: 100%; border-radius: 4px; transition: width 1s ease; }
+.pf-cyan { background: linear-gradient(90deg, var(--cyan), #0060ff); }
+.pf-red { background: linear-gradient(90deg, var(--red), #ff7b00); }
+.pf-green { background: linear-gradient(90deg, var(--green), #00b359); }
+.pf-orange { background: linear-gradient(90deg, var(--orange), var(--yellow)); }
+
+/* ═══════ MAP PAGE ═══════ */
+#map-container { height: 500px; border-radius: 16px; overflow: hidden; border: 1px solid var(--border); }
+.map-legend { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 12px; }
+.legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-secondary); }
+.legend-dot { width: 12px; height: 12px; border-radius: 50%; }
+
+/* ═══════ REPORT PAGE ═══════ */
+.form-group { margin-bottom: 20px; }
+label { display: block; font-size: 13px; font-weight: 600; color: var(--text-secondary); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em; }
+input, select, textarea {
+  width: 100%; background: var(--bg-secondary); border: 1px solid var(--border);
+  border-radius: 10px; padding: 12px 16px; color: var(--text-primary);
+  font-family: var(--font-body); font-size: 14px; outline: none;
+  transition: all 0.2s;
+}
+input:focus, select:focus, textarea:focus { border-color: var(--cyan); box-shadow: 0 0 0 3px rgba(0,168,255,0.1); }
+textarea { resize: vertical; min-height: 100px; }
+select option { background: var(--bg-card); }
+.btn {
+  padding: 12px 24px; border-radius: 10px; font-size: 14px; font-weight: 600;
+  border: none; cursor: pointer; transition: all 0.2s; font-family: var(--font-body);
+  display: inline-flex; align-items: center; gap: 8px;
+}
+.btn-primary { background: linear-gradient(135deg, var(--cyan), #0060ff); color: white; }
+.btn-primary:hover { transform: translateY(-2px); box-shadow: var(--glow-cyan); }
+.btn-danger { background: linear-gradient(135deg, var(--red), #c00020); color: white; }
+.btn-danger:hover { transform: translateY(-2px); box-shadow: var(--glow-red); }
+.btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text-primary); }
+.btn-outline:hover { border-color: var(--cyan); color: var(--cyan); }
+.file-upload {
+  border: 2px dashed var(--border); border-radius: 12px;
+  padding: 32px; text-align: center; cursor: pointer;
+  transition: all 0.2s; color: var(--text-secondary);
+}
+.file-upload:hover { border-color: var(--cyan); color: var(--cyan); }
+.file-upload input { display: none; }
+
+/* ═══════ CHATBOT ═══════ */
+.chat-container {
+  height: 480px; background: var(--bg-secondary);
+  border: 1px solid var(--border); border-radius: 16px;
+  display: flex; flex-direction: column; overflow: hidden;
+}
+.chat-header {
+  padding: 16px 20px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 12px;
+  background: var(--bg-card);
+}
+.chat-avatar {
+  width: 40px; height: 40px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--cyan), #0060ff);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; box-shadow: var(--glow-cyan);
+}
+.chat-messages { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+.msg { max-width: 78%; display: flex; flex-direction: column; gap: 4px; }
+.msg.bot { align-self: flex-start; }
+.msg.user { align-self: flex-end; }
+.msg-bubble {
+  padding: 12px 16px; border-radius: 16px; font-size: 14px; line-height: 1.5;
+}
+.msg.bot .msg-bubble {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-bottom-left-radius: 4px;
+}
+.msg.user .msg-bubble {
+  background: linear-gradient(135deg, var(--cyan), #0060ff);
+  color: white; border-bottom-right-radius: 4px;
+}
+.msg-time { font-size: 11px; color: var(--text-muted); font-family: var(--font-mono); }
+.msg.user .msg-time { text-align: right; }
+.chat-input-area { padding: 16px; border-top: 1px solid var(--border); display: flex; gap: 10px; background: var(--bg-card); }
+.chat-input-area input { margin: 0; border-radius: 24px; }
+.chat-send {
+  width: 42px; height: 42px; border-radius: 50%; flex-shrink: 0;
+  background: linear-gradient(135deg, var(--cyan), #0060ff);
+  border: none; cursor: pointer; color: white; font-size: 18px;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.2s;
+}
+.chat-send:hover { transform: scale(1.1); box-shadow: var(--glow-cyan); }
+.quick-chips { display: flex; gap: 8px; flex-wrap: wrap; padding: 0 20px 12px; }
+.chip {
+  padding: 6px 14px; border-radius: 20px; font-size: 12px; cursor: pointer;
+  background: var(--bg-card); border: 1px solid var(--border);
+  color: var(--text-secondary); transition: all 0.2s;
+}
+.chip:hover { border-color: var(--cyan); color: var(--cyan); }
+.typing-indicator { display: flex; gap: 4px; align-items: center; padding: 12px 16px; }
+.typing-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--cyan); animation: typingBounce 1.2s ease infinite; }
+.typing-dot:nth-child(2){animation-delay:0.2s} .typing-dot:nth-child(3){animation-delay:0.4s}
+@keyframes typingBounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-8px)}}
+
+/* ═══════ ADMIN / LOGIN ═══════ */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+  backdrop-filter: blur(8px); z-index: 9000;
+  display: none; align-items: center; justify-content: center;
+}
+.modal-overlay.open { display: flex; }
+.modal {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: 20px; padding: 36px; width: 100%; max-width: 420px;
+  position: relative; animation: modalIn 0.3s ease;
+}
+@keyframes modalIn { from{transform:scale(0.9);opacity:0} to{transform:scale(1);opacity:1} }
+.modal-title { font-family: var(--font-display); font-size: 20px; font-weight: 700; margin-bottom: 6px; }
+.modal-subtitle { font-size: 13px; color: var(--text-secondary); margin-bottom: 24px; }
+.modal-close {
+  position: absolute; top: 16px; right: 16px;
+  background: none; border: none; color: var(--text-secondary);
+  cursor: pointer; font-size: 20px; transition: color 0.2s;
+}
+.modal-close:hover { color: var(--text-primary); }
+.tab-switch { display: flex; background: var(--bg-secondary); border-radius: 10px; padding: 4px; gap: 4px; margin-bottom: 24px; }
+.tab-btn {
+  flex: 1; padding: 8px; border-radius: 8px; border: none; cursor: pointer;
+  font-family: var(--font-body); font-size: 13px; font-weight: 600;
+  background: none; color: var(--text-secondary); transition: all 0.2s;
+}
+.tab-btn.active { background: var(--bg-card); color: var(--text-primary); box-shadow: var(--glow-cyan); }
+.user-avatar {
+  width: 38px; height: 38px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--cyan), #0060ff);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; cursor: pointer; border: 2px solid var(--border);
+  transition: border-color 0.2s;
+}
+.user-avatar:hover { border-color: var(--cyan); }
+
+/* ═══════ DASHBOARD CHARTS ═══════ */
+.chart-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; padding: 20px; }
+.chart-wrapper { position: relative; height: 220px; }
+.disaster-history-table {
+  width: 100%; border-collapse: collapse; font-size: 13px;
+  font-family: var(--font-mono);
+}
+.disaster-history-table th {
+  text-align: left; padding: 10px 14px;
+  color: var(--text-secondary); font-size: 11px; text-transform: uppercase;
+  letter-spacing: 0.06em; border-bottom: 1px solid var(--border);
+  font-family: var(--font-body); font-weight: 600;
+}
+.disaster-history-table td { padding: 10px 14px; border-bottom: 1px solid rgba(255,255,255,0.04); }
+.disaster-history-table tr:hover td { background: var(--bg-card-hover); }
+
+/* ═══════ AI RISK PANEL ═══════ */
+.risk-gauge {
+  width: 160px; height: 80px; position: relative; margin: 0 auto 12px;
+}
+.risk-gauge svg { width: 100%; height: 100%; }
+.gauge-track { fill: none; stroke: var(--bg-secondary); stroke-width: 14; }
+.gauge-fill { fill: none; stroke-width: 14; stroke-linecap: round; transition: stroke-dashoffset 1.5s ease; }
+.gauge-label { font-family: var(--font-display); font-size: 22px; font-weight: 700; text-anchor: middle; }
+.gauge-sub { font-size: 11px; text-anchor: middle; }
+
+/* ═══════ NOTIFICATION TOAST ═══════ */
+#toast-container {
+  position: fixed; top: calc(var(--nav-height) + 56px); right: 20px;
+  z-index: 8000; display: flex; flex-direction: column; gap: 10px;
+}
+.toast {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: 12px; padding: 14px 18px; min-width: 280px; max-width: 360px;
+  display: flex; align-items: flex-start; gap: 12px;
+  animation: toastIn 0.3s ease;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+}
+.toast.danger { border-left: 3px solid var(--red); }
+.toast.info { border-left: 3px solid var(--cyan); }
+.toast.success { border-left: 3px solid var(--green); }
+@keyframes toastIn { from{transform:translateX(100%);opacity:0} to{transform:translateX(0);opacity:1} }
+.toast-icon { font-size: 20px; flex-shrink: 0; }
+.toast-title { font-size: 13px; font-weight: 600; margin-bottom: 2px; }
+.toast-msg { font-size: 12px; color: var(--text-secondary); }
+.toast-close { margin-left: auto; background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 16px; flex-shrink: 0; }
+
+/* ═══════ ADMIN PAGE ═══════ */
+.admin-stat { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--border); }
+.admin-stat:last-child { border: none; }
+.admin-stat-label { font-size: 13px; color: var(--text-secondary); }
+.admin-stat-val { font-family: var(--font-display); font-size: 16px; font-weight: 700; }
+.user-row { display: flex; align-items: center; gap: 14px; padding: 12px 0; border-bottom: 1px solid var(--border); }
+.user-row:last-child { border: none; }
+.user-pic { width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg,var(--cyan),#0060ff); display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0; }
+.user-name { font-size: 14px; font-weight: 600; }
+.user-role { font-size: 12px; color: var(--text-secondary); }
+.badge { display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+.badge-admin { background: rgba(0,168,255,0.12); color: var(--cyan); }
+.badge-user { background: rgba(0,229,123,0.12); color: var(--green); }
+.badge-mod { background: rgba(255,214,0,0.12); color: var(--yellow); }
+
+/* ═══════ SCAN LINE EFFECT ═══════ */
+.scanlines {
+  position: fixed; inset: 0; pointer-events: none; z-index: 9998;
+  background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,168,255,0.01) 2px, rgba(0,168,255,0.01) 4px);
+  opacity: 0.6;
+}
+
+/* ═══════ LOADING OVERLAY ═══════ */
+#loader {
+  position: fixed; inset: 0; z-index: 99999;
+  background: var(--bg-primary);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 24px; transition: opacity 0.5s;
+}
+#loader.hidden { opacity: 0; pointer-events: none; }
+.loader-logo { font-family: var(--font-display); font-size: 40px; font-weight: 900; color: var(--cyan); letter-spacing: 0.15em; text-shadow: var(--glow-cyan); }
+.loader-bar { width: 220px; height: 3px; background: var(--bg-card); border-radius: 2px; overflow: hidden; }
+.loader-fill { height: 100%; background: linear-gradient(90deg, var(--cyan), #0060ff); border-radius: 2px; animation: loaderAnim 1.8s ease forwards; }
+@keyframes loaderAnim { from{width:0%} to{width:100%} }
+.loader-text { font-family: var(--font-mono); font-size: 12px; color: var(--cyan); letter-spacing: 0.1em; }
+
+/* ═══════ EXTRAS ═══════ */
+.section-divider { height: 1px; background: linear-gradient(90deg,transparent,var(--border),transparent); margin: 24px 0; }
+.tag { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 6px; font-size: 12px; background: var(--bg-secondary); border: 1px solid var(--border); color: var(--text-secondary); }
+.live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--red); display: inline-block; animation: pulse 1.2s infinite; }
+.glow-text { color: var(--cyan); text-shadow: var(--glow-cyan); }
+</style>
+</head>
+<body>
+
+<!-- SCANLINES -->
+<div class="scanlines"></div>
+
+<!-- LOADER -->
+<div id="loader">
+  <div class="loader-logo">AEGIS</div>
+  <div class="loader-bar"><div class="loader-fill"></div></div>
+  <div class="loader-text" id="loader-text">INITIALIZING DISASTER MONITORING...</div>
+</div>
+
+<!-- ALERT BANNER -->
+<div id="alert-banner">
+  <span class="ticker" id="alert-ticker">
+    ⚠️ ACTIVE ALERT: Heavy rainfall predicted in Western Ghats region — Flood risk: HIGH &nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp; 🌡️ Extreme heat advisory issued for Rajasthan — Temp 46°C &nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp; 🌊 Cyclone advisory: Bay of Bengal — Wind 120 km/h &nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp; 📡 AEGIS AI System Online | Real-time monitoring active &nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp; 🚨 Emergency Helpline: 1078 | NDRF: 011-24363260
+  </span>
+</div>
+
+<!-- TOPNAV -->
+<nav id="topnav">
+  <div class="nav-logo">
+    <div class="logo-icon">🛡️</div>
+    AEGIS
+  </div>
+  <div class="nav-links">
+    <button class="nav-link active" onclick="showPage('home')"><span class="nav-icon">🏠</span>Home</button>
+    <button class="nav-link" onclick="showPage('dashboard')"><span class="nav-icon">📊</span>Dashboard</button>
+    <button class="nav-link" onclick="showPage('map')"><span class="nav-icon">🗺️</span>Map</button>
+    <button class="nav-link" onclick="showPage('alerts')"><span class="nav-icon">🚨</span>Alerts</button>
+    <button class="nav-link" onclick="showPage('report')"><span class="nav-icon">📝</span>Report</button>
+    <button class="nav-link" onclick="showPage('chatbot')"><span class="nav-icon">🤖</span>AI Guide</button>
+    <button class="nav-link" onclick="showPage('admin')"><span class="nav-icon">⚙️</span>Admin</button>
+  </div>
+  <div class="nav-right">
+    <div class="status-indicator">
+      <div class="pulse-dot"></div> LIVE
+    </div>
+    <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme">🌙</button>
+    <div class="user-avatar" onclick="openModal('auth-modal')" title="Login / Signup" id="user-btn">👤</div>
+  </div>
+</nav>
+
+<!-- TOAST CONTAINER -->
+<div id="toast-container"></div>
+
+<!-- ═══════ APP PAGES ═══════ -->
+<div id="app">
+
+<!-- ██████████ HOME PAGE ██████████ -->
+<div class="page active" id="page-home">
+
+  <!-- Hero -->
+  <div class="hero-section">
+    <div class="hero-top">
+      <div>
+        <div class="hero-title">National <span>Disaster</span><br>Intelligence Hub</div>
+        <div class="hero-meta">
+          <div class="live-dot"></div>
+          Real-time AI monitoring — <span id="hero-location">📍 Delhi, India</span> &nbsp;|&nbsp; <span id="hero-time"></span>
+        </div>
+      </div>
+      <div style="text-align:right">
+        <div id="overall-risk-display"></div>
+        <div style="font-size:12px;color:var(--text-secondary);margin-top:8px">AI Risk Assessment</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px">Updated <span id="last-updated">just now</span></div>
+      </div>
+    </div>
+    <div class="hero-metrics">
+      <div class="hero-metric cyan"><div class="val" id="hm-temp">--°</div><div class="lbl">Temperature</div></div>
+      <div class="hero-metric orange"><div class="val" id="hm-rain">--mm</div><div class="lbl">Rainfall</div></div>
+      <div class="hero-metric red"><div class="val" id="hm-flood">--%</div><div class="lbl">Flood Prob</div></div>
+      <div class="hero-metric green"><div class="val" id="hm-wind">--km/h</div><div class="lbl">Wind Speed</div></div>
+      <div class="hero-metric"><div class="val" style="color:var(--yellow)" id="hm-humidity">--%</div><div class="lbl">Humidity</div></div>
+      <div class="hero-metric"><div class="val" style="color:var(--cyan)" id="hm-aqi">--</div><div class="lbl">AQI</div></div>
+    </div>
+  </div>
+
+  <!-- Emergency Buttons -->
+  <div style="margin-bottom:12px">
+    <div style="font-family:var(--font-display);font-size:12px;letter-spacing:0.1em;color:var(--text-muted);margin-bottom:10px;text-transform:uppercase">Emergency Services</div>
+    <div class="emergency-grid">
+      <button class="emergency-btn eb-fire" onclick="emergencyCall('FIRE','🔥','101')">
+        <span class="eb-icon">🔥</span> Fire Brigade<br><small style="font-family:var(--font-mono);opacity:.7">Call 101</small>
+      </button>
+      <button class="emergency-btn eb-police" onclick="emergencyCall('POLICE','🚔','100')">
+        <span class="eb-icon">🚔</span> Police<br><small style="font-family:var(--font-mono);opacity:.7">Call 100</small>
+      </button>
+      <button class="emergency-btn eb-medical" onclick="emergencyCall('AMBULANCE','🚑','108')">
+        <span class="eb-icon">🚑</span> Ambulance<br><small style="font-family:var(--font-mono);opacity:.7">Call 108</small>
+      </button>
+      <button class="emergency-btn eb-evacuation" onclick="showPage('map')">
+        <span class="eb-icon">🏃</span> Safe Zone<br><small style="font-family:var(--font-mono);opacity:.7">Find Route</small>
+      </button>
+    </div>
+  </div>
+
+  <!-- Weather + Alerts -->
+  <div class="weather-strip">
+    <div class="weather-chip"><span class="wc-icon">🌡️</span><div><div class="wc-val" id="wc-temp">--</div><div class="wc-lbl">Temperature</div></div></div>
+    <div class="weather-chip"><span class="wc-icon">💧</span><div><div class="wc-val" id="wc-humidity">--</div><div class="wc-lbl">Humidity</div></div></div>
+    <div class="weather-chip"><span class="wc-icon">🌬️</span><div><div class="wc-val" id="wc-wind">--</div><div class="wc-lbl">Wind</div></div></div>
+    <div class="weather-chip"><span class="wc-icon">☁️</span><div><div class="wc-val" id="wc-cloud">--</div><div class="wc-lbl">Cloud Cover</div></div></div>
+    <div class="weather-chip"><span class="wc-icon">🌧️</span><div><div class="wc-val" id="wc-rain">--</div><div class="wc-lbl">Rain</div></div></div>
+    <div class="weather-chip"><span class="wc-icon">👁️</span><div><div class="wc-val" id="wc-vis">--</div><div class="wc-lbl">Visibility</div></div></div>
+    <div class="weather-chip"><span class="wc-icon">🔵</span><div><div class="wc-val" id="wc-pressure">--</div><div class="wc-lbl">Pressure</div></div></div>
+    <div class="weather-chip"><span class="wc-icon">💨</span><div><div class="wc-val" id="wc-aqi">--</div><div class="wc-lbl">AQI</div></div></div>
+  </div>
+
+  <div class="grid-2">
+    <!-- Active Alerts -->
+    <div class="card danger">
+      <div class="card-header">
+        <div class="card-title">🚨 Active Alerts</div>
+        <span class="tag"><div class="live-dot" style="margin-right:4px"></div>Live</span>
+      </div>
+      <div id="active-alerts-list"></div>
+    </div>
+
+    <!-- AI Risk Prediction -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">🤖 AI Risk Prediction</div>
+        <span class="tag">ML Model</span>
+      </div>
+      <div id="ai-risk-gauges"></div>
+    </div>
+  </div>
+
+  <!-- Disaster Status Cards -->
+  <div class="grid-4" id="disaster-status-cards"></div>
+
+</div>
+
+<!-- ██████████ DASHBOARD PAGE ██████████ -->
+<div class="page" id="page-dashboard">
+  <div class="page-title">📊 Analytics Dashboard</div>
+  <div class="page-subtitle">Real-time disaster statistics and historical data</div>
+
+  <!-- Summary Cards -->
+  <div class="grid-4" id="dash-summary-cards"></div>
+
+  <div class="grid-2">
+    <div class="chart-card">
+      <div class="card-header"><div class="card-title">📈 Disaster Frequency (30 Days)</div></div>
+      <div class="chart-wrapper"><canvas id="chart-frequency"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="card-header"><div class="card-title">🌡️ Weather Parameters</div></div>
+      <div class="chart-wrapper"><canvas id="chart-weather"></canvas></div>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div class="chart-card">
+      <div class="card-header"><div class="card-title">⚠️ Risk Level Distribution</div></div>
+      <div class="chart-wrapper"><canvas id="chart-risk"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="card-header"><div class="card-title">🌊 Flood Probability Trend</div></div>
+      <div class="chart-wrapper"><canvas id="chart-flood"></canvas></div>
+    </div>
+  </div>
+
+  <!-- Disaster History Table -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">📋 Disaster History Log</div>
+      <button class="btn btn-outline" style="font-size:12px;padding:6px 14px" onclick="exportData()">⬇ Export CSV</button>
+    </div>
+    <div style="overflow-x:auto">
+      <table class="disaster-history-table">
+        <thead>
+          <tr>
+            <th>ID</th><th>Type</th><th>Location</th><th>Severity</th><th>Date/Time</th><th>Status</th><th>Casualties</th>
+          </tr>
+        </thead>
+        <tbody id="history-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ██████████ MAP PAGE ██████████ -->
+<div class="page" id="page-map">
+  <div class="page-title">🗺️ Live Disaster Map</div>
+  <div class="page-subtitle">Real-time incident locations, safe zones and emergency facilities</div>
+
+  <div class="card" style="padding:0;margin-bottom:16px">
+    <div id="map-container"></div>
+  </div>
+
+  <div class="map-legend">
+    <div class="legend-item"><div class="legend-dot" style="background:#ff2d4a"></div>Active Disaster</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#00e57b"></div>Safe Zone</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#00a8ff"></div>Hospital</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#ffd600"></div>Police Station</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#ff7b00"></div>Evacuation Center</div>
+  </div>
+
+  <div class="grid-3" style="margin-top:16px">
+    <div class="card success">
+      <div class="card-header"><div class="card-title">🏥 Nearest Hospitals</div></div>
+      <div id="hospital-list"></div>
+    </div>
+    <div class="card warning">
+      <div class="card-header"><div class="card-title">🚔 Police Stations</div></div>
+      <div id="police-list"></div>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="card-title">🏃 Evacuation Routes</div></div>
+      <div id="evacuation-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ██████████ ALERTS PAGE ██████████ -->
+<div class="page" id="page-alerts">
+  <div class="page-title">🚨 Alert Center</div>
+  <div class="page-subtitle">All active warnings and notifications</div>
+
+  <div class="grid-4" id="alert-summary-chips"></div>
+
+  <div class="grid-2-1">
+    <div>
+      <div style="font-family:var(--font-display);font-size:13px;letter-spacing:0.1em;color:var(--text-secondary);margin-bottom:14px;text-transform:uppercase">All Alerts</div>
+      <div id="all-alerts-container"></div>
+    </div>
+    <div>
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-header"><div class="card-title">📲 SMS Alert</div></div>
+        <div class="form-group" style="margin-bottom:14px">
+          <label>Your Phone Number</label>
+          <input type="tel" placeholder="+91 9876543210" id="sms-phone">
+        </div>
+        <button class="btn btn-danger" style="width:100%" onclick="subscribeAlert()">🔔 Subscribe to Alerts</button>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title">📧 Email Alerts</div></div>
+        <div class="form-group" style="margin-bottom:14px">
+          <label>Email Address</label>
+          <input type="email" placeholder="you@email.com" id="email-sub">
+        </div>
+        <button class="btn btn-primary" style="width:100%" onclick="subscribeEmail()">📧 Subscribe</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ██████████ REPORT PAGE ██████████ -->
+<div class="page" id="page-report">
+  <div class="page-title">📝 Report Disaster</div>
+  <div class="page-subtitle">Help others by reporting ongoing disasters in your area</div>
+
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-header"><div class="card-title">📍 Disaster Details</div></div>
+
+      <div class="form-group">
+        <label>Disaster Type *</label>
+        <select id="rep-type">
+          <option>🌊 Flood</option>
+          <option>🌪️ Cyclone / Storm</option>
+          <option>🔥 Wildfire</option>
+          <option>🏔️ Earthquake</option>
+          <option>🌧️ Heavy Rainfall</option>
+          <option>🌡️ Extreme Heat / Cold</option>
+          <option>☁️ Air Quality Emergency</option>
+          <option>🌊 Tsunami Warning</option>
+          <option>🏔️ Landslide</option>
+          <option>⚡ Lightning Strike</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Severity Level *</label>
+        <select id="rep-severity">
+          <option>🟢 Low — Minor impact</option>
+          <option>🟡 Medium — Moderate impact</option>
+          <option>🟠 High — Serious impact</option>
+          <option>🔴 Critical — Life threatening</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Location *</label>
+        <input type="text" id="rep-location" placeholder="Enter city, area or landmark">
+        <button class="btn btn-outline" style="margin-top:8px;font-size:12px;padding:7px 14px" onclick="detectLocation()">📍 Detect My Location</button>
+      </div>
+
+      <div class="form-group">
+        <label>Description *</label>
+        <textarea id="rep-desc" placeholder="Describe what you are seeing — include number of people affected, extent of damage, etc."></textarea>
+      </div>
+
+      <div class="form-group">
+        <label>Upload Images</label>
+        <label class="file-upload" for="rep-image">
+          <div style="font-size:32px;margin-bottom:8px">📸</div>
+          <div>Click to upload photos</div>
+          <div style="font-size:12px;opacity:.6;margin-top:4px">JPG, PNG up to 10MB</div>
+          <input type="file" id="rep-image" accept="image/*" multiple onchange="handleImages(this)">
+        </label>
+        <div id="image-preview" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"></div>
+      </div>
+
+      <div class="form-group">
+        <label>Contact Number</label>
+        <input type="tel" id="rep-phone" placeholder="+91 9876543210">
+      </div>
+
+      <button class="btn btn-danger" onclick="submitReport()" style="width:100%;padding:14px">
+        🚨 Submit Emergency Report
+      </button>
+    </div>
+
+    <div>
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-header"><div class="card-title">📊 Report Statistics</div></div>
+        <div id="report-stats"></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title">📋 Recent User Reports</div></div>
+        <div id="recent-reports-list"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ██████████ CHATBOT PAGE ██████████ -->
+<div class="page" id="page-chatbot">
+  <div class="page-title">🤖 AEGIS AI Assistant</div>
+  <div class="page-subtitle">Get real-time disaster guidance and emergency safety tips</div>
+
+  <div class="grid-2-1">
+    <div>
+      <div class="chat-container">
+        <div class="chat-header">
+          <div class="chat-avatar">🤖</div>
+          <div>
+            <div style="font-weight:600;font-size:14px">AEGIS Disaster AI</div>
+            <div style="font-size:12px;color:var(--green);display:flex;align-items:center;gap:5px"><div class="pulse-dot" style="background:var(--green)"></div>Online — Trained on NDMA Guidelines</div>
+          </div>
+        </div>
+        <div class="chat-messages" id="chat-messages"></div>
+        <div class="quick-chips" id="quick-chips"></div>
+        <div class="chat-input-area">
+          <input type="text" id="chat-input" placeholder="Ask about disaster safety..." onkeydown="if(event.key==='Enter')sendChat()">
+          <button class="chat-send" onclick="sendChat()">➤</button>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-header"><div class="card-title">💡 Quick Topics</div></div>
+        <div style="display:flex;flex-direction:column;gap:8px" id="topic-list"></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title">📚 Safety Protocols</div></div>
+        <div id="safety-protocols"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ██████████ ADMIN PAGE ██████████ -->
+<div class="page" id="page-admin">
+  <div class="page-title">⚙️ Admin Control Panel</div>
+  <div class="page-subtitle">System management and monitoring</div>
+
+  <div class="grid-4" id="admin-stats-grid"></div>
+
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-header"><div class="card-title">👥 Registered Users</div></div>
+      <div id="user-list-admin"></div>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="card-title">📡 System Status</div></div>
+      <div id="system-status-list"></div>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-header"><div class="card-title">📢 Send Mass Alert</div></div>
+      <div class="form-group"><label>Alert Type</label>
+        <select id="admin-alert-type">
+          <option>🚨 Critical Emergency</option>
+          <option>⚠️ Warning</option>
+          <option>ℹ️ Information</option>
+          <option>✅ All Clear</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Message</label>
+        <textarea id="admin-alert-msg" placeholder="Enter alert message to broadcast..." style="min-height:80px"></textarea>
+      </div>
+      <button class="btn btn-danger" style="width:100%" onclick="sendMassAlert()">📡 Broadcast Alert</button>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="card-title">🤖 AI Model Status</div></div>
+      <div id="ai-model-status"></div>
+    </div>
+  </div>
+</div>
+
+</div><!-- END #app -->
+
+<!-- ═══════ AUTH MODAL ═══════ -->
+<div class="modal-overlay" id="auth-modal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('auth-modal')">✕</button>
+    <div class="modal-title">🛡️ AEGIS Access</div>
+    <div class="modal-subtitle">Login or create account for full features</div>
+    <div class="tab-switch">
+      <button class="tab-btn active" onclick="switchAuthTab('login')">Login</button>
+      <button class="tab-btn" onclick="switchAuthTab('signup')">Sign Up</button>
+    </div>
+    <div id="auth-form-container"></div>
+  </div>
+</div>
+
+<!-- ═══════ EMERGENCY CONFIRM MODAL ═══════ -->
+<div class="modal-overlay" id="emergency-modal">
+  <div class="modal" style="max-width:360px;text-align:center">
+    <div style="font-size:48px;margin-bottom:12px" id="em-icon"></div>
+    <div class="modal-title" id="em-title"></div>
+    <div class="modal-subtitle" id="em-desc"></div>
+    <div style="display:flex;gap:10px;margin-top:20px">
+      <button class="btn btn-outline" style="flex:1" onclick="closeModal('emergency-modal')">Cancel</button>
+      <button class="btn btn-danger" style="flex:1" id="em-call-btn">Call Now</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// AEGIS — AI Disaster Management System
+// Full JavaScript Logic
+// ═══════════════════════════════════════════════════════════════
+
+// ─── CONFIG ────────────────────────────────────────────────────
+const OWM_API_KEY = 'demo'; // Replace with actual OpenWeatherMap API key
+const CITY = 'New Delhi';
+const LAT = 28.6139, LNG = 77.2090;
+
+// ─── STATE ─────────────────────────────────────────────────────
+let weatherData = null;
+let currentUser = null;
+let userReports = [];
+let map = null;
+let charts = {};
+let isDark = true;
+
+// Simulated ML Model coefficients (trained on NDMA dataset)
+const ML_MODEL = {
+  flood: (rain, humidity, windSpeed) => {
+    const score = (rain * 0.45) + (humidity * 0.35) + (windSpeed * 0.2);
+    return Math.min(100, Math.max(0, score));
+  },
+  earthquake: (mag = 0) => Math.min(100, mag * 12 + Math.random() * 10),
+  cyclone: (wind, pressure) => Math.min(100, (wind / 300 * 60) + ((1013 - pressure) / 50 * 40)),
+  heatwave: (temp, humidity) => Math.min(100, Math.max(0, (temp - 30) * 4 + humidity * 0.2)),
+  airQuality: (aqi) => Math.min(100, aqi / 5)
+};
+
+// ─── SIMULATED WEATHER DATA ─────────────────────────────────────
+function generateWeatherData() {
+  const hour = new Date().getHours();
+  const base = {
+    temp: 28 + Math.sin(hour / 8) * 6 + (Math.random() - 0.5) * 3,
+    humidity: 65 + Math.random() * 20,
+    windSpeed: 12 + Math.random() * 18,
+    rainfall: Math.random() < 0.4 ? Math.random() * 40 : 0,
+    cloudCover: 40 + Math.random() * 50,
+    pressure: 1005 + (Math.random() - 0.5) * 20,
+    visibility: 6 + Math.random() * 8,
+    aqi: 80 + Math.random() * 120,
+    condition: ['Partly Cloudy', 'Overcast', 'Light Rain', 'Scattered Thunderstorms', 'Hazy', 'Clear'][Math.floor(Math.random() * 6)]
+  };
+  return base;
+}
+
+// ─── LOADERS MESSAGES ──────────────────────────────────────────
+const loaderMessages = [
+  'CONNECTING TO WEATHER SATELLITES...',
+  'LOADING AI RISK MODELS...',
+  'SYNCING NDMA DATABASE...',
+  'CALIBRATING FLOOD SENSORS...',
+  'INITIALIZING MAP ENGINE...',
+  'SYSTEM READY'
+];
+
+let loaderIdx = 0;
+const loaderInterval = setInterval(() => {
+  document.getElementById('loader-text').textContent = loaderMessages[loaderIdx];
+  loaderIdx++;
+  if (loaderIdx >= loaderMessages.length) {
+    clearInterval(loaderInterval);
+    setTimeout(() => {
+      document.getElementById('loader').classList.add('hidden');
+      initApp();
+    }, 400);
+  }
+}, 280);
+
+// ─── INIT ────────────────────────────────────────────────────────
+function initApp() {
+  updateClock();
+  setInterval(updateClock, 1000);
+  loadWeather();
+  setInterval(loadWeather, 30000); // refresh every 30s
+  renderHomePage();
+  renderAlertPage();
+  renderReportPage();
+  initChatbot();
+  renderAdminPage();
+  initAuthForms();
+  setTimeout(() => {
+    showToast('🛡️', 'AEGIS Online', 'AI disaster monitoring system active and tracking 24 zones', 'info');
+    setTimeout(() => showToast('⚠️', 'Flood Warning', 'High flood risk detected in Yamuna catchment area', 'danger'), 3000);
+  }, 1500);
+}
+
+// ─── CLOCK ───────────────────────────────────────────────────────
+function updateClock() {
+  const now = new Date();
+  const el = document.getElementById('hero-time');
+  if (el) el.textContent = now.toLocaleTimeString('en-IN', { hour12: true });
+}
+
+// ─── WEATHER ─────────────────────────────────────────────────────
+async function loadWeather() {
+  // Try real API, fall back to simulation
+  let w;
+  try {
+    const res = await fetch(`https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(CITY)}&appid=${OWM_API_KEY}&units=metric`);
+    if (!res.ok) throw new Error('API key invalid');
+    const data = await res.json();
+    w = {
+      temp: data.main.temp,
+      humidity: data.main.humidity,
+      windSpeed: data.wind.speed * 3.6,
+      rainfall: (data.rain?.['1h'] || 0),
+      cloudCover: data.clouds.all,
+      pressure: data.main.pressure,
+      visibility: (data.visibility || 10000) / 1000,
+      aqi: 120,
+      condition: data.weather[0].description
+    };
+  } catch {
+    w = generateWeatherData();
+  }
+  weatherData = w;
+  updateWeatherUI(w);
+  updateAIRisk(w);
+  document.getElementById('last-updated').textContent = 'just now';
+}
+
+function updateWeatherUI(w) {
+  const fmt = (v, u) => v !== undefined ? `${v.toFixed(1)}${u}` : '--';
+  // Hero metrics
+  el('hm-temp', `${w.temp.toFixed(1)}°C`);
+  el('hm-rain', `${w.rainfall.toFixed(1)}mm`);
+  el('hm-wind', `${w.windSpeed.toFixed(0)}km/h`);
+  el('hm-humidity', `${w.humidity.toFixed(0)}%`);
+  el('hm-aqi', Math.round(w.aqi));
+  // Chips
+  el('wc-temp', `${w.temp.toFixed(1)}°C`);
+  el('wc-humidity', `${w.humidity.toFixed(0)}%`);
+  el('wc-wind', `${w.windSpeed.toFixed(0)} km/h`);
+  el('wc-cloud', `${w.cloudCover.toFixed(0)}%`);
+  el('wc-rain', `${w.rainfall.toFixed(1)} mm`);
+  el('wc-vis', `${w.visibility.toFixed(1)} km`);
+  el('wc-pressure', `${w.pressure.toFixed(0)} hPa`);
+  el('wc-aqi', Math.round(w.aqi));
+}
+
+function el(id, val) {
+  const e = document.getElementById(id);
+  if (e) e.textContent = val;
+}
+
+// ─── AI RISK PREDICTION (ML) ──────────────────────────────────────
+function updateAIRisk(w) {
+  const floodRisk = ML_MODEL.flood(w.rainfall, w.humidity, w.windSpeed);
+  const heatRisk = ML_MODEL.heatwave(w.temp, w.humidity);
+  const aqiRisk = ML_MODEL.airQuality(w.aqi);
+  const cycloneRisk = ML_MODEL.cyclone(w.windSpeed, w.pressure);
+
+  const overallRisk = Math.max(floodRisk, heatRisk, aqiRisk, cycloneRisk);
+  el('hm-flood', `${floodRisk.toFixed(0)}%`);
+
+  // Overall risk badge
+  const riskEl = document.getElementById('overall-risk-display');
+  if (riskEl) {
+    let level, cls;
+    if (overallRisk > 75) { level = 'CRITICAL'; cls = 'risk-critical'; }
+    else if (overallRisk > 50) { level = 'HIGH'; cls = 'risk-high'; }
+    else if (overallRisk > 25) { level = 'MEDIUM'; cls = 'risk-medium'; }
+    else { level = 'LOW'; cls = 'risk-low'; }
+    riskEl.innerHTML = `<div class="risk-badge ${cls}"><div class="pulse-dot"></div>${level} RISK — ${overallRisk.toFixed(0)}%</div>`;
+  }
+
+  // Risk gauges
+  const gaugeEl = document.getElementById('ai-risk-gauges');
+  if (gaugeEl) {
+    gaugeEl.innerHTML = renderRiskBars([
+      { label: '🌊 Flood Risk', val: floodRisk },
+      { label: '🌡️ Heatwave Risk', val: heatRisk },
+      { label: '☁️ Air Quality Risk', val: aqiRisk },
+      { label: '🌪️ Cyclone Risk', val: cycloneRisk }
+    ]);
+  }
+
+  // Disaster status cards
+  renderDisasterCards(floodRisk, heatRisk, aqiRisk, cycloneRisk);
+}
+
+function renderRiskBars(risks) {
+  return risks.map(r => {
+    const pct = r.val;
+    let color = pct > 70 ? 'pf-red' : pct > 40 ? 'pf-orange' : 'pf-cyan';
+    let risk = pct > 70 ? 'HIGH' : pct > 40 ? 'MEDIUM' : 'LOW';
+    return `
+      <div style="margin-bottom:14px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
+          <span style="font-size:13px">${r.label}</span>
+          <span style="font-family:var(--font-mono);font-size:12px;color:var(--text-secondary)">${pct.toFixed(0)}% — ${risk}</span>
+        </div>
+        <div class="progress-bar"><div class="progress-fill ${color}" style="width:${pct}%"></div></div>
+      </div>`;
+  }).join('');
+}
+
+function renderDisasterCards(flood, heat, aqi, cyclone) {
+  const cards = [
+    { icon: '🌊', label: 'Flood Risk', val: flood, unit: '%', desc: flood > 60 ? 'Monitor river levels' : 'Normal levels' },
+    { icon: '🌡️', label: 'Heat Index', val: weatherData ? weatherData.temp : 0, unit: '°C', desc: heat > 60 ? 'Extreme heat warning' : 'Comfortable' },
+    { icon: '☁️', label: 'Air Quality', val: weatherData ? weatherData.aqi : 0, unit: 'AQI', desc: aqi > 50 ? 'Wear N95 mask' : 'Good quality' },
+    { icon: '🌪️', label: 'Storm Risk', val: cyclone, unit: '%', desc: cyclone > 60 ? 'Seek shelter' : 'Normal conditions' },
+    { icon: '🏔️', label: 'Earthquake', val: 12, unit: '%', desc: 'No recent activity' },
+    { icon: '🌊', label: 'Tsunami', val: 5, unit: '%', desc: 'Pacific status normal' },
+    { icon: '🔥', label: 'Wildfire', val: heat > 50 ? 40 : 8, unit: '%', desc: heat > 50 ? 'Dry conditions' : 'Low risk' },
+    { icon: '🌧️', label: 'Rainfall', val: weatherData ? weatherData.rainfall : 0, unit: 'mm', desc: 'Hourly total' }
+  ];
+  const el = document.getElementById('disaster-status-cards');
+  if (!el) return;
+  el.innerHTML = cards.map(c => {
+    const risk = c.val > 60 ? 'danger' : c.val > 30 ? 'warning' : '';
+    return `
+      <div class="card ${risk}">
+        <div class="card-header"><div class="card-title">${c.label}</div><span>${c.icon}</span></div>
+        <div class="card-value">${typeof c.val === 'number' ? c.val.toFixed(1) : c.val}<span class="card-unit">${c.unit}</span></div>
+        <div style="font-size:12px;color:var(--text-secondary);margin-top:8px">${c.desc}</div>
+      </div>`;
+  }).join('');
+}
+
+// ─── ALERTS ─────────────────────────────────────────────────────
+const ALERTS_DATA = [
+  { level: 'critical', icon: '🌊', title: 'Flash Flood Warning', desc: 'Yamuna River rising — 24 zones affected', time: '2m ago', region: 'Delhi NCR' },
+  { level: 'warning', icon: '🌡️', title: 'Extreme Heat Advisory', desc: 'Temperature to hit 47°C — avoid outdoor activity', time: '15m ago', region: 'Rajasthan' },
+  { level: 'warning', icon: '🌪️', title: 'Cyclone Watch', desc: 'Depression in Bay of Bengal — wind 110 km/h', time: '32m ago', region: 'Odisha Coast' },
+  { level: 'medium', icon: '☁️', title: 'Severe Air Quality', desc: 'AQI 285 — Unhealthy for sensitive groups', time: '1h ago', region: 'NCR Region' },
+  { level: 'medium', icon: '🌧️', title: 'Heavy Rainfall Alert', desc: '120mm expected in 6 hours', time: '2h ago', region: 'Western Ghats' },
+  { level: 'info', icon: '🏔️', title: 'Seismic Update', desc: 'M 3.2 earthquake — No tsunami risk', time: '3h ago', region: 'Uttarakhand' },
+  { level: 'info', icon: '🌊', title: 'High Tide Notice', desc: 'Tidal surge of 2.1m expected', time: '4h ago', region: 'Mumbai Coast' },
+];
+
+function renderHomePage() {
+  const alertList = document.getElementById('active-alerts-list');
+  if (alertList) {
+    alertList.innerHTML = ALERTS_DATA.slice(0, 4).map(a => `
+      <div class="alert-item ${a.level}" onclick="showPage('alerts')">
+        <div class="alert-icon">${a.icon}</div>
+        <div>
+          <div class="alert-title">${a.title}</div>
+          <div class="alert-desc">${a.desc} — <strong>${a.region}</strong></div>
+        </div>
+        <div class="alert-time">${a.time}</div>
+      </div>`).join('');
+  }
+}
+
+function renderAlertPage() {
+  const chips = [
+    { label: 'Critical', count: ALERTS_DATA.filter(a => a.level === 'critical').length, color: 'danger', icon: '🔴' },
+    { label: 'Warning', count: ALERTS_DATA.filter(a => a.level === 'warning').length, color: 'warning', icon: '🟠' },
+    { label: 'Watch', count: ALERTS_DATA.filter(a => a.level === 'medium').length, color: '', icon: '🟡' },
+    { label: 'Info', count: ALERTS_DATA.filter(a => a.level === 'info').length, color: '', icon: '🔵' }
+  ];
+  const chipEl = document.getElementById('alert-summary-chips');
+  if (chipEl) chipEl.innerHTML = chips.map(c => `
+    <div class="card ${c.color}">
+      <div class="card-header"><div class="card-title">${c.label} Alerts</div><span>${c.icon}</span></div>
+      <div class="card-value">${c.count}</div>
+      <div style="font-size:12px;color:var(--text-secondary);margin-top:6px">Currently active</div>
+    </div>`).join('');
+
+  const allAlerts = document.getElementById('all-alerts-container');
+  if (allAlerts) {
+    allAlerts.innerHTML = ALERTS_DATA.map(a => `
+      <div class="alert-item ${a.level}">
+        <div class="alert-icon">${a.icon}</div>
+        <div>
+          <div class="alert-title">${a.title}</div>
+          <div class="alert-desc">${a.desc} — <strong>${a.region}</strong></div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+          <div class="alert-time">${a.time}</div>
+          <div class="risk-badge ${a.level === 'critical' ? 'risk-critical' : a.level === 'warning' ? 'risk-high' : a.level === 'medium' ? 'risk-medium' : 'risk-low'}">${a.level.toUpperCase()}</div>
+        </div>
+      </div>`).join('');
+  }
+}
+
+// ─── DASHBOARD ───────────────────────────────────────────────────
+function initDashboard() {
+  const summaryData = [
+    { label: 'Active Incidents', val: 7, icon: '🚨', color: 'red' },
+    { label: 'People Affected', val: '42,850', icon: '👥', color: 'orange' },
+    { label: 'Safe Zones Active', val: 23, icon: '🏠', color: 'green' },
+    { label: 'Alerts Sent Today', val: '1,247', icon: '📲', color: 'cyan' }
+  ];
+  const el = document.getElementById('dash-summary-cards');
+  if (el) el.innerHTML = summaryData.map(d => `
+    <div class="card">
+      <div class="card-header"><div class="card-title">${d.label}</div><span>${d.icon}</span></div>
+      <div class="card-value" style="color:var(--${d.color})">${d.val}</div>
+    </div>`).join('');
+
+  renderHistoryTable();
+  setTimeout(() => {
+    renderCharts();
+  }, 100);
+}
+
+function renderCharts() {
+  // Frequency chart
+  if (!charts.frequency) {
+    const ctx = document.getElementById('chart-frequency');
+    if (!ctx) return;
+    const labels = Array.from({length: 30}, (_, i) => {
+      const d = new Date(); d.setDate(d.getDate() - 29 + i);
+      return d.toLocaleDateString('en-IN', {month:'short',day:'numeric'});
+    });
+    charts.frequency = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [{
+          label: 'Disasters',
+          data: Array.from({length: 30}, () => Math.floor(Math.random() * 8)),
+          backgroundColor: 'rgba(0,168,255,0.5)',
+          borderColor: '#00a8ff', borderWidth: 1, borderRadius: 4
+        }]
+      },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { ticks: { color: '#7a9bb5', maxTicksLimit: 7 }, grid: { color: 'rgba(255,255,255,0.04)' } }, y: { ticks: { color: '#7a9bb5' }, grid: { color: 'rgba(255,255,255,0.04)' } } } }
+    });
+  }
+
+  // Weather radar chart
+  if (!charts.weather) {
+    const ctx2 = document.getElementById('chart-weather');
+    if (!ctx2) return;
+    charts.weather = new Chart(ctx2, {
+      type: 'radar',
+      data: {
+        labels: ['Temperature', 'Humidity', 'Wind', 'Pressure', 'Rainfall', 'Visibility'],
+        datasets: [{
+          label: 'Current',
+          data: [65, 75, 45, 80, 30, 70],
+          backgroundColor: 'rgba(0,168,255,0.1)',
+          borderColor: '#00a8ff', pointBackgroundColor: '#00a8ff'
+        }, {
+          label: 'Threshold',
+          data: [80, 90, 70, 60, 80, 50],
+          backgroundColor: 'rgba(255,45,74,0.08)',
+          borderColor: '#ff2d4a', pointBackgroundColor: '#ff2d4a'
+        }]
+      },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: '#7a9bb5' } } }, scales: { r: { grid: { color: 'rgba(255,255,255,0.08)' }, ticks: { color: '#7a9bb5', backdropColor: 'transparent' }, pointLabels: { color: '#7a9bb5' } } } }
+    });
+  }
+
+  // Risk donut
+  if (!charts.risk) {
+    const ctx3 = document.getElementById('chart-risk');
+    if (!ctx3) return;
+    charts.risk = new Chart(ctx3, {
+      type: 'doughnut',
+      data: {
+        labels: ['Critical', 'High', 'Medium', 'Low'],
+        datasets: [{ data: [15, 25, 35, 25], backgroundColor: ['#ff2d4a', '#ff7b00', '#ffd600', '#00e57b'], borderWidth: 0 }]
+      },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: '#7a9bb5' } } }, cutout: '70%' }
+    });
+  }
+
+  // Flood trend
+  if (!charts.flood) {
+    const ctx4 = document.getElementById('chart-flood');
+    if (!ctx4) return;
+    const hrs = Array.from({length: 24}, (_, i) => `${i}:00`);
+    charts.flood = new Chart(ctx4, {
+      type: 'line',
+      data: {
+        labels: hrs,
+        datasets: [{
+          label: 'Flood Probability %',
+          data: Array.from({length: 24}, (_, i) => 20 + Math.sin(i / 4) * 25 + Math.random() * 15),
+          borderColor: '#00a8ff', backgroundColor: 'rgba(0,168,255,0.1)',
+          fill: true, tension: 0.4, pointRadius: 2
+        }]
+      },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { ticks: { color: '#7a9bb5', maxTicksLimit: 8 }, grid: { color: 'rgba(255,255,255,0.04)' } }, y: { ticks: { color: '#7a9bb5' }, grid: { color: 'rgba(255,255,255,0.04)' } } } }
+    });
+  }
+}
+
+const HISTORY_DATA = [
+  { id: 'DIS-001', type: '🌊 Flood', loc: 'Delhi NCR', severity: 'critical', dt: '2026-02-28 14:20', status: 'Active', cas: 3 },
+  { id: 'DIS-002', type: '🌡️ Heatwave', loc: 'Rajasthan', severity: 'warning', dt: '2026-02-27 10:00', status: 'Active', cas: 0 },
+  { id: 'DIS-003', type: '🌪️ Cyclone', loc: 'Odisha', severity: 'warning', dt: '2026-02-26 08:30', status: 'Monitoring', cas: 1 },
+  { id: 'DIS-004', type: '🔥 Wildfire', loc: 'Uttarakhand', severity: 'medium', dt: '2026-02-25 12:45', status: 'Contained', cas: 0 },
+  { id: 'DIS-005', type: '🏔️ Earthquake', loc: 'Himachal', severity: 'medium', dt: '2026-02-24 03:12', status: 'Resolved', cas: 2 },
+  { id: 'DIS-006', type: '🌧️ Heavy Rain', loc: 'Mumbai', severity: 'low', dt: '2026-02-23 16:00', status: 'Resolved', cas: 0 },
+];
+
+function renderHistoryTable() {
+  const tbody = document.getElementById('history-tbody');
+  if (!tbody) return;
+  tbody.innerHTML = HISTORY_DATA.map(d => {
+    const sColors = { critical: 'var(--red)', warning: 'var(--orange)', medium: 'var(--yellow)', low: 'var(--green)' };
+    const stColors = { Active: 'var(--red)', Monitoring: 'var(--orange)', Contained: 'var(--yellow)', Resolved: 'var(--green)' };
+    return `<tr>
+      <td style="color:var(--cyan)">${d.id}</td>
+      <td>${d.type}</td>
+      <td>📍 ${d.loc}</td>
+      <td><span style="color:${sColors[d.severity] || 'white'}">${d.severity.toUpperCase()}</span></td>
+      <td>${d.dt}</td>
+      <td><span style="color:${stColors[d.status] || 'white'}">${d.status}</span></td>
+      <td>${d.cas > 0 ? `⚠️ ${d.cas}` : '✅ 0'}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ─── MAP ─────────────────────────────────────────────────────────
+function initMap() {
+  if (map) return;
+  const container = document.getElementById('map-container');
+  if (!container) return;
+
+  map = L.map('map-container').setView([LAT, LNG], 10);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    attribution: '© OpenStreetMap © CartoDB', maxZoom: 19
+  }).addTo(map);
+
+  // Custom markers
+  const markers = [
+    { lat: 28.6139, lng: 77.2090, type: 'disaster', icon: '🌊', label: 'Flood Zone — Yamuna Bank' },
+    { lat: 28.5672, lng: 77.3210, type: 'safe', icon: '🏠', label: 'Safe Zone — Noida Sector 62' },
+    { lat: 28.7041, lng: 77.1025, type: 'hospital', icon: '🏥', label: 'AIIMS Delhi' },
+    { lat: 28.6304, lng: 77.2177, type: 'police', icon: '🚔', label: 'Connaught Place Police' },
+    { lat: 28.5921, lng: 77.0460, type: 'evacuation', icon: '🏃', label: 'Evacuation Center — Dwarka' },
+    { lat: 28.4595, lng: 77.0266, type: 'disaster', icon: '🌡️', label: 'Heat Zone — Gurugram' },
+    { lat: 28.7500, lng: 77.3000, type: 'safe', icon: '🏠', label: 'Safe Zone — Ghaziabad' },
+    { lat: 28.6562, lng: 77.2410, type: 'hospital', icon: '🏥', label: 'Ram Manohar Lohia Hospital' },
+  ];
+
+  const colors = { disaster: '#ff2d4a', safe: '#00e57b', hospital: '#00a8ff', police: '#ffd600', evacuation: '#ff7b00' };
+
+  markers.forEach(m => {
+    const icon = L.divIcon({
+      html: `<div style="background:${colors[m.type] || '#888'};width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;border:2px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.5)">${m.icon}</div>`,
+      className: '', iconSize: [32, 32], iconAnchor: [16, 16]
+    });
+    L.marker([m.lat, m.lng], { icon }).addTo(map).bindPopup(`<b>${m.label}</b><br>Type: ${m.type}`);
+  });
+
+  // Flood zone circle
+  L.circle([28.6139, 77.2090], { radius: 5000, fillColor: '#ff2d4a', fillOpacity: 0.1, color: '#ff2d4a', weight: 2, dashArray: '5,5' }).addTo(map);
+
+  // Location list sidebar
+  renderLocationLists();
+}
+
+function renderLocationLists() {
+  const hospitals = [
+    { name: 'AIIMS Delhi', dist: '2.3 km', beds: '2400' },
+    { name: 'Safdarjung Hospital', dist: '4.1 km', beds: '1500' },
+    { name: 'Ram Manohar Lohia', dist: '3.8 km', beds: '1200' }
+  ];
+  const police = [
+    { name: 'CP Police Station', dist: '1.5 km', ph: '011-23344567' },
+    { name: 'Karol Bagh PS', dist: '3.2 km', ph: '011-23641800' },
+    { name: 'Patel Nagar PS', dist: '5.0 km', ph: '011-25880100' }
+  ];
+  const evac = [
+    { name: 'Dwarka Sector 10', dist: '8.2 km', cap: '500 people' },
+    { name: 'Rohini Community Hall', dist: '6.5 km', cap: '300 people' },
+    { name: 'Yamuna Sports Complex', dist: '4.2 km', cap: '800 people' }
+  ];
+
+  const hEl = document.getElementById('hospital-list');
+  if (hEl) hEl.innerHTML = hospitals.map(h => `
+    <div style="padding:10px 0;border-bottom:1px solid var(--border)">
+      <div style="font-weight:600;font-size:14px">🏥 ${h.name}</div>
+      <div style="font-size:12px;color:var(--text-secondary);margin-top:3px">📍 ${h.dist} away • 🛏️ ${h.beds} beds</div>
+    </div>`).join('');
+
+  const pEl = document.getElementById('police-list');
+  if (pEl) pEl.innerHTML = police.map(p => `
+    <div style="padding:10px 0;border-bottom:1px solid var(--border)">
+      <div style="font-weight:600;font-size:14px">🚔 ${p.name}</div>
+      <div style="font-size:12px;color:var(--text-secondary);margin-top:3px">📍 ${p.dist} • ☎️ ${p.ph}</div>
+    </div>`).join('');
+
+  const eEl = document.getElementById('evacuation-list');
+  if (eEl) eEl.innerHTML = evac.map(e => `
+    <div style="padding:10px 0;border-bottom:1px solid var(--border)">
+      <div style="font-weight:600;font-size:14px">🏃 ${e.name}</div>
+      <div style="font-size:12px;color:var(--text-secondary);margin-top:3px">📍 ${e.dist} • 👥 ${e.cap}</div>
+    </div>`).join('');
+}
+
+// ─── REPORT ─────────────────────────────────────────────────────
+function renderReportPage() {
+  const stats = [
+    { label: 'Total Reports Today', val: 48, icon: '📊' },
+    { label: 'Verified', val: 31, icon: '✅' },
+    { label: 'Under Review', val: 12, icon: '🔍' },
+    { label: 'False Reports', val: 5, icon: '❌' }
+  ];
+  const el = document.getElementById('report-stats');
+  if (el) el.innerHTML = stats.map(s => `
+    <div class="admin-stat"><span class="admin-stat-label">${s.icon} ${s.label}</span><span class="admin-stat-val">${s.val}</span></div>`).join('');
+
+  const recent = [
+    { type: '🌊 Flood', loc: 'Kashmere Gate', time: '5m ago', status: 'Verified' },
+    { type: '🔥 Fire', loc: 'Paharganj Market', time: '18m ago', status: 'Under Review' },
+    { type: '🌡️ Heat Stress', loc: 'Okhla Industrial', time: '45m ago', status: 'Verified' },
+  ];
+  const rEl = document.getElementById('recent-reports-list');
+  if (rEl) rEl.innerHTML = recent.map(r => `
+    <div style="padding:10px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+      <div>
+        <div style="font-size:14px;font-weight:600">${r.type}</div>
+        <div style="font-size:12px;color:var(--text-secondary)">📍 ${r.loc} • ${r.time}</div>
+      </div>
+      <span class="badge ${r.status === 'Verified' ? 'badge-user' : 'badge-mod'}">${r.status}</span>
+    </div>`).join('');
+}
+
+function detectLocation() {
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(p => {
+      document.getElementById('rep-location').value = `${p.coords.latitude.toFixed(4)}, ${p.coords.longitude.toFixed(4)}`;
+      showToast('📍', 'Location Detected', 'GPS coordinates captured successfully', 'info');
+    }, () => {
+      document.getElementById('rep-location').value = 'New Delhi, India';
+    });
+  } else {
+    document.getElementById('rep-location').value = 'New Delhi, India';
+  }
+}
+
+function handleImages(input) {
+  const preview = document.getElementById('image-preview');
+  preview.innerHTML = '';
+  Array.from(input.files).forEach(file => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      preview.innerHTML += `<div style="width:80px;height:80px;border-radius:8px;overflow:hidden;border:2px solid var(--border)"><img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover"></div>`;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function submitReport() {
+  const type = document.getElementById('rep-type').value;
+  const loc = document.getElementById('rep-location').value;
+  const desc = document.getElementById('rep-desc').value;
+  if (!loc || !desc) { showToast('⚠️', 'Missing Info', 'Please fill all required fields', 'danger'); return; }
+  showToast('✅', 'Report Submitted', `Your report for ${type} at ${loc} has been sent to NDMA`, 'info');
+  document.getElementById('rep-desc').value = '';
+  document.getElementById('rep-location').value = '';
+}
+
+// ─── CHATBOT AI ──────────────────────────────────────────────────
+const BOT_RESPONSES = {
+  flood: `🌊 **Flood Safety Guidelines:**
+
+1. **Immediate Actions:**
+   - Move to higher ground immediately
+   - Do not walk through flowing water (6 inches can knock you down)
+   - Avoid storm drains and drainage channels
+
+2. **Emergency Kit:**
+   - Water (1 gallon/person/day for 3 days)
+   - Non-perishable food, first aid kit
+   - Flashlight, battery-powered radio
+
+3. **Evacuation:**
+   - Follow local authorities' instructions
+   - Turn off utilities before leaving
+   - Never return until authorities declare it safe
+
+📞 **NDRF Helpline: 011-24363260** | Flood Control: 1077`,
+
+  earthquake: `🏔️ **Earthquake Safety Guidelines:**
+
+**DURING the earthquake — DROP, COVER, HOLD ON:**
+- Drop to hands and knees
+- Cover your head and neck under a sturdy desk
+- Hold on until shaking stops
+
+**AFTER the earthquake:**
+- Expect aftershocks
+- Check for injuries and hazards
+- Do NOT use elevators
+- Stay away from damaged buildings
+
+⚠️ If you smell gas — evacuate immediately, call gas company
+📞 **Emergency: 112** | NDMA: 011-26701728`,
+
+  cyclone: `🌪️ **Cyclone Safety Protocol:**
+
+**BEFORE:**
+- Board up windows and secure outdoor items
+- Stock emergency supplies for 72 hours
+- Know your evacuation route
+
+**DURING:**
+- Stay indoors away from windows
+- Go to the lowest floor if flooding threatens
+- Listen to battery radio for updates
+
+**AFTER:**
+- Be cautious of downed power lines
+- Don't enter damaged buildings
+- Use generator outdoors only
+
+📞 **IMD Cyclone Warning: 1800-180-8080**`,
+
+  heatwave: `🌡️ **Heatwave Safety Guidelines:**
+
+- Stay hydrated — drink water every 15-20 minutes
+- Wear loose, light-colored clothing
+- Avoid outdoor activity 11am–4pm
+- Never leave children or pets in vehicles
+- Check on elderly neighbors
+
+**Heat Stroke Signs:** Hot/dry skin, rapid pulse, confusion
+**Action:** Call 108 immediately, move to shade, apply cold water
+
+💊 **ORS (Oral Rehydration Solution)** — available at PHCs free`,
+
+  emergency: `🚨 **Emergency Contact Numbers — India:**
+
+| Service | Number |
+|---------|--------|
+| Police | 100 |
+| Ambulance | 108 |
+| Fire Brigade | 101 |
+| NDMA Helpline | 1078 |
+| Women Helpline | 1091 |
+| Child Helpline | 1098 |
+| NDRF | 011-24363260 |
+| Coast Guard | 1554 |
+| Railway Emergency | 1512 |
+
+📱 **Save all numbers now — you may not have internet in disaster!**`
+};
+
+const QUICK_CHIPS_DATA = ['Flood Safety', 'Earthquake', 'Cyclone', 'Heat Wave', 'Emergency Numbers', 'First Aid', 'Evacuation'];
+const TOPICS = [
+  { icon: '🌊', title: 'Flood Protocol', key: 'flood' },
+  { icon: '🏔️', title: 'Earthquake Response', key: 'earthquake' },
+  { icon: '🌪️', title: 'Cyclone Safety', key: 'cyclone' },
+  { icon: '🌡️', title: 'Heat Emergency', key: 'heatwave' },
+  { icon: '🚨', title: 'Emergency Numbers', key: 'emergency' }
+];
+
+function initChatbot() {
+  const chips = document.getElementById('quick-chips');
+  if (chips) chips.innerHTML = QUICK_CHIPS_DATA.map(c => `<button class="chip" onclick="quickChat('${c}')">${c}</button>`).join('');
+
+  const topics = document.getElementById('topic-list');
+  if (topics) topics.innerHTML = TOPICS.map(t => `
+    <button class="btn btn-outline" style="text-align:left;justify-content:flex-start;gap:10px" onclick="quickChat('${t.title}')">
+      <span style="font-size:18px">${t.icon}</span> ${t.title}
+    </button>`).join('');
+
+  const protocols = document.getElementById('safety-protocols');
+  if (protocols) protocols.innerHTML = `
+    <div style="font-size:13px;color:var(--text-secondary);line-height:1.7">
+      <p>📋 <strong>NDMA Protocols</strong> are embedded in this AI system.</p>
+      <br>
+      <p>This chatbot provides guidance based on:</p>
+      <ul style="margin:8px 0 0 20px;display:flex;flex-direction:column;gap:4px">
+        <li>National Disaster Management Authority (NDMA)</li>
+        <li>Indian Meteorological Department (IMD)</li>
+        <li>Ministry of Home Affairs SOP</li>
+        <li>WHO Disaster Health Guidelines</li>
+      </ul>
+    </div>`;
+
+  // Welcome message
+  addBotMessage("🛡️ Hello! I'm **AEGIS**, your AI disaster guidance assistant. I'm trained on NDMA protocols and emergency response guidelines.\n\nHow can I help you today? Ask me about flood safety, earthquake response, evacuation procedures, or any disaster emergency.");
+}
+
+function addBotMessage(text) {
+  const messages = document.getElementById('chat-messages');
+  if (!messages) return;
+  const time = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+  const div = document.createElement('div');
+  div.className = 'msg bot';
+  div.innerHTML = `<div class="msg-bubble" style="white-space:pre-line">${text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')}</div><div class="msg-time">${time}</div>`;
+  messages.appendChild(div);
+  messages.scrollTop = messages.scrollHeight;
+}
+
+function addUserMessage(text) {
+  const messages = document.getElementById('chat-messages');
+  if (!messages) return;
+  const time = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+  const div = document.createElement('div');
+  div.className = 'msg user';
+  div.innerHTML = `<div class="msg-bubble">${text}</div><div class="msg-time">${time}</div>`;
+  messages.appendChild(div);
+  messages.scrollTop = messages.scrollHeight;
+}
+
+function showTyping() {
+  const messages = document.getElementById('chat-messages');
+  if (!messages) return;
+  const div = document.createElement('div');
+  div.className = 'msg bot';
+  div.id = 'typing-indicator';
+  div.innerHTML = `<div class="msg-bubble"><div class="typing-indicator"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div></div>`;
+  messages.appendChild(div);
+  messages.scrollTop = messages.scrollHeight;
+}
+
+function removeTyping() {
+  const el = document.getElementById('typing-indicator');
+  if (el) el.remove();
+}
+
+function getBotResponse(text) {
+  const t = text.toLowerCase();
+  if (t.includes('flood') || t.includes('water')) return BOT_RESPONSES.flood;
+  if (t.includes('earthquake') || t.includes('seismic') || t.includes('quake')) return BOT_RESPONSES.earthquake;
+  if (t.includes('cyclone') || t.includes('storm') || t.includes('typhoon')) return BOT_RESPONSES.cyclone;
+  if (t.includes('heat') || t.includes('temperature') || t.includes('hot')) return BOT_RESPONSES.heatwave;
+  if (t.includes('emergency') || t.includes('number') || t.includes('contact') || t.includes('call') || t.includes('helpline')) return BOT_RESPONSES.emergency;
+  if (t.includes('first aid') || t.includes('injury')) return `🩹 **Basic First Aid for Disaster Situations:**\n\n**Bleeding:** Apply direct pressure with clean cloth for 10-15 min\n**Burns:** Cool with running water for 20 min. Never use butter/ice\n**Choking:** 5 back blows then 5 abdominal thrusts\n**Drowning:** Remove from water, start CPR if not breathing\n**Fractures:** Immobilize — do not attempt to straighten\n\n📞 Always call 108 for serious injuries`;
+  if (t.includes('evacuate') || t.includes('evacuation') || t.includes('leave') || t.includes('escape')) return `🏃 **Evacuation Procedure:**\n\n1. Follow official evacuation orders — don't wait\n2. Take emergency kit: water, food, documents, medicines\n3. Turn off gas, electricity, water before leaving\n4. Lock home and inform authorities\n5. Use designated evacuation routes ONLY\n6. Do not return until officially declared safe\n\n📍 Nearest safe zones are shown on the AEGIS Map page`;
+  return `🤖 I can help you with disaster safety guidance. Try asking me about:\n\n• **Flood Safety** procedures\n• **Earthquake** response protocol\n• **Cyclone/Storm** preparedness\n• **Heatwave** emergency guidance\n• **Emergency contact numbers**\n• **First Aid** tips\n• **Evacuation** procedures\n\nWhat disaster topic would you like to know about?`;
+}
+
+function sendChat() {
+  const input = document.getElementById('chat-input');
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+  addUserMessage(text);
+  showTyping();
+  setTimeout(() => {
+    removeTyping();
+    addBotMessage(getBotResponse(text));
+  }, 1200 + Math.random() * 800);
+}
+
+function quickChat(topic) {
+  const input = document.getElementById('chat-input');
+  if (input) { input.value = topic; sendChat(); }
+}
+
+// ─── ADMIN ───────────────────────────────────────────────────────
+function renderAdminPage() {
+  const stats = [
+    { label: 'Total Users', val: '8,432', icon: '👥', color: 'cyan' },
+    { label: 'Reports Today', val: 48, icon: '📝', color: 'orange' },
+    { label: 'Alerts Sent', val: '1,247', icon: '📲', color: 'red' },
+    { label: 'System Uptime', val: '99.8%', icon: '⚡', color: 'green' }
+  ];
+  const el = document.getElementById('admin-stats-grid');
+  if (el) el.innerHTML = stats.map(s => `
+    <div class="card">
+      <div class="card-header"><div class="card-title">${s.label}</div><span>${s.icon}</span></div>
+      <div class="card-value" style="color:var(--${s.color})">${s.val}</div>
+    </div>`).join('');
+
+  const users = [
+    { name: 'Arjun Sharma', role: 'Admin', icon: '👨', badge: 'badge-admin' },
+    { name: 'Priya Mehta', role: 'Moderator', icon: '👩', badge: 'badge-mod' },
+    { name: 'Rahul Singh', role: 'User', icon: '🧑', badge: 'badge-user' },
+    { name: 'Kavita Patel', role: 'Moderator', icon: '👩', badge: 'badge-mod' },
+  ];
+  const uEl = document.getElementById('user-list-admin');
+  if (uEl) uEl.innerHTML = users.map(u => `
+    <div class="user-row">
+      <div class="user-pic">${u.icon}</div>
+      <div>
+        <div class="user-name">${u.name}</div>
+        <div class="user-role">${u.role}</div>
+      </div>
+      <span class="badge ${u.badge}" style="margin-left:auto">${u.role}</span>
+    </div>`).join('');
+
+  const systems = [
+    { label: '🌐 Weather API', val: '✅ Online', color: 'green' },
+    { label: '🗺️ Map Engine', val: '✅ Online', color: 'green' },
+    { label: '🤖 AI Model', val: '✅ Online', color: 'green' },
+    { label: '📡 Alert System', val: '✅ Online', color: 'green' },
+    { label: '💾 Database', val: '✅ Online', color: 'green' },
+    { label: '📲 SMS Gateway', val: '⚠️ Degraded', color: 'orange' },
+  ];
+  const sEl = document.getElementById('system-status-list');
+  if (sEl) sEl.innerHTML = systems.map(s => `
+    <div class="admin-stat">
+      <span class="admin-stat-label">${s.label}</span>
+      <span style="color:var(--${s.color});font-family:var(--font-mono);font-size:13px">${s.val}</span>
+    </div>`).join('');
+
+  const aiModels = [
+    { name: 'Flood Risk Model', acc: '94.2%', last: '1 day ago' },
+    { name: 'Earthquake Predictor', acc: '87.6%', last: '3 days ago' },
+    { name: 'Cyclone Tracker', acc: '91.8%', last: '12 hours ago' },
+    { name: 'AQI Forecaster', acc: '96.1%', last: '6 hours ago' }
+  ];
+  const aiEl = document.getElementById('ai-model-status');
+  if (aiEl) aiEl.innerHTML = aiModels.map(m => `
+    <div class="admin-stat">
+      <span class="admin-stat-label">🤖 ${m.name}</span>
+      <div style="text-align:right">
+        <div style="font-family:var(--font-display);color:var(--green);font-size:14px">${m.acc}</div>
+        <div style="font-size:11px;color:var(--text-muted)">Updated ${m.last}</div>
+      </div>
+    </div>`).join('');
+}
+
+function sendMassAlert() {
+  const type = document.getElementById('admin-alert-type').value;
+  const msg = document.getElementById('admin-alert-msg').value;
+  if (!msg) { showToast('⚠️', 'Error', 'Please enter an alert message', 'danger'); return; }
+  showToast('📡', 'Alert Broadcast', `Mass alert sent to 8,432 users: "${msg.slice(0, 40)}..."`, 'info');
+  document.getElementById('admin-alert-msg').value = '';
+}
+
+// ─── AUTH ─────────────────────────────────────────────────────────
+function initAuthForms() {
+  renderLoginForm();
+}
+
+function renderLoginForm() {
+  document.getElementById('auth-form-container').innerHTML = `
+    <div class="form-group"><label>Email</label><input type="email" id="auth-email" placeholder="admin@aegis.gov.in"></div>
+    <div class="form-group"><label>Password</label><input type="password" id="auth-pass" placeholder="••••••••"></div>
+    <button class="btn btn-primary" style="width:100%;margin-bottom:12px" onclick="doLogin()">🔐 Login to AEGIS</button>
+    <div style="text-align:center;font-size:12px;color:var(--text-muted)">Demo: admin@aegis.in / password123</div>`;
+}
+
+function renderSignupForm() {
+  document.getElementById('auth-form-container').innerHTML = `
+    <div class="form-group"><label>Full Name</label><input type="text" id="auth-name" placeholder="Arjun Sharma"></div>
+    <div class="form-group"><label>Email</label><input type="email" id="auth-email2" placeholder="you@email.com"></div>
+    <div class="form-group"><label>Phone</label><input type="tel" id="auth-phone" placeholder="+91 9876543210"></div>
+    <div class="form-group"><label>Password</label><input type="password" id="auth-pass2" placeholder="••••••••"></div>
+    <button class="btn btn-primary" style="width:100%" onclick="doSignup()">✅ Create Account</button>`;
+}
+
+function switchAuthTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach((b, i) => {
+    b.classList.toggle('active', (i === 0 && tab === 'login') || (i === 1 && tab === 'signup'));
+  });
+  if (tab === 'login') renderLoginForm(); else renderSignupForm();
+}
+
+function doLogin() {
+  const email = document.getElementById('auth-email').value;
+  if (!email) { showToast('⚠️', 'Error', 'Please enter email', 'danger'); return; }
+  currentUser = { name: 'Admin User', email };
+  document.getElementById('user-btn').innerHTML = '🧑';
+  document.getElementById('user-btn').title = `Logged in: ${email}`;
+  closeModal('auth-modal');
+  showToast('✅', 'Welcome Back!', `Logged in as ${email}`, 'info');
+}
+
+function doSignup() {
+  const name = document.getElementById('auth-name')?.value;
+  if (!name) { showToast('⚠️', 'Error', 'Please enter your name', 'danger'); return; }
+  closeModal('auth-modal');
+  showToast('✅', 'Account Created!', `Welcome to AEGIS, ${name}`, 'info');
+}
+
+// ─── EMERGENCY ────────────────────────────────────────────────────
+function emergencyCall(type, icon, number) {
+  document.getElementById('em-icon').textContent = icon;
+  document.getElementById('em-title').textContent = `Call ${type}`;
+  document.getElementById('em-desc').textContent = `You are about to dial ${number}. This will connect you to ${type} services.`;
+  document.getElementById('em-call-btn').onclick = () => {
+    window.location.href = `tel:${number}`;
+    closeModal('emergency-modal');
+    showToast(icon, 'Calling...', `Connecting to ${type} — ${number}`, 'danger');
+  };
+  openModal('emergency-modal');
+}
+
+// ─── UTILS ────────────────────────────────────────────────────────
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+  document.getElementById(`page-${id}`).classList.add('active');
+  const navLinks = document.querySelectorAll('.nav-link');
+  const order = ['home','dashboard','map','alerts','report','chatbot','admin'];
+  const idx = order.indexOf(id);
+  if (idx >= 0 && navLinks[idx]) navLinks[idx].classList.add('active');
+
+  // Lazy init pages
+  if (id === 'dashboard') initDashboard();
+  if (id === 'map') setTimeout(initMap, 100);
+  window.scrollTo(0, 0);
+}
+
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+function showToast(icon, title, msg, type = 'info') {
+  const container = document.getElementById('toast-container');
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  toast.innerHTML = `
+    <div class="toast-icon">${icon}</div>
+    <div><div class="toast-title">${title}</div><div class="toast-msg">${msg}</div></div>
+    <button class="toast-close" onclick="this.parentElement.remove()">✕</button>`;
+  container.appendChild(toast);
+  setTimeout(() => { toast.style.opacity = '0'; toast.style.transform = 'translateX(100%)'; toast.style.transition = 'all 0.3s'; setTimeout(() => toast.remove(), 300); }, 5000);
+}
+
+function toggleTheme() {
+  isDark = !isDark;
+  document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+  document.querySelector('.theme-toggle').textContent = isDark ? '🌙' : '☀️';
+}
+
+function subscribeAlert() {
+  const ph = document.getElementById('sms-phone').value;
+  if (!ph) { showToast('⚠️', 'Error', 'Please enter phone number', 'danger'); return; }
+  showToast('📲', 'SMS Subscribed!', `Alerts will be sent to ${ph}`, 'info');
+}
+
+function subscribeEmail() {
+  const em = document.getElementById('email-sub').value;
+  if (!em) { showToast('⚠️', 'Error', 'Please enter email', 'danger'); return; }
+  showToast('📧', 'Email Subscribed!', `Disaster alerts will be sent to ${em}`, 'info');
+}
+
+function exportData() {
+  const csv = 'ID,Type,Location,Severity,DateTime,Status,Casualties\n' +
+    HISTORY_DATA.map(d => `${d.id},"${d.type}","${d.loc}","${d.severity}","${d.dt}","${d.status}",${d.cas}`).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = 'disaster_history.csv'; a.click();
+  showToast('⬇️', 'Export Complete', 'CSV file downloaded', 'info');
+}
+
+// Click outside modal to close
+document.querySelectorAll('.modal-overlay').forEach(o => {
+  o.addEventListener('click', e => { if (e.target === o) o.classList.remove('open'); });
+});
+
+// Simulate live data updates
+setInterval(() => {
+  if (weatherData) {
+    weatherData.temp += (Math.random() - 0.5) * 0.3;
+    weatherData.humidity += (Math.random() - 0.5) * 1;
+    weatherData.windSpeed += (Math.random() - 0.5) * 2;
+    updateWeatherUI(weatherData);
+    updateAIRisk(weatherData);
+  }
+  // Random alerts
+  if (Math.random() < 0.1) {
+    const alerts = [
+      { icon: '🌊', title: 'Water Level Rising', msg: 'Yamuna at 205m — evacuation advisory', type: 'danger' },
+      { icon: '🌡️', title: 'Temperature Spike', msg: 'Temperature reached 44°C in NCR', type: 'danger' },
+      { icon: '💨', title: 'Wind Speed Update', msg: 'Gusts reaching 85 km/h in coastal areas', type: 'info' },
+    ];
+    const a = alerts[Math.floor(Math.random() * alerts.length)];
+    showToast(a.icon, a.title, a.msg, a.type);
+  }
+}, 8000);
+</script>
+</body>
+</html>

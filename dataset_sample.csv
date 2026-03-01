@@ -1,0 +1,26 @@
+date,city,state,temperature,humidity,wind_speed,rainfall,pressure,cloud_cover,visibility,aqi,disaster_type,severity,flood_prob,risk_level
+2025-06-15,Mumbai,Maharashtra,32.5,88.0,45.0,124.5,995.2,95.0,3.2,145,Flood,High,78.5,HIGH
+2025-06-16,Delhi,Delhi,44.2,28.0,18.0,0.0,1012.0,15.0,8.5,280,Heatwave,Critical,8.2,CRITICAL
+2025-05-12,Chennai,Tamil Nadu,35.1,82.0,120.0,45.0,988.0,90.0,4.0,95,Cyclone,High,56.3,HIGH
+2025-07-22,Kolkata,West Bengal,30.8,92.0,22.0,210.5,1002.0,98.0,2.1,110,Flood,Critical,91.2,CRITICAL
+2025-08-05,Bengaluru,Karnataka,28.5,70.0,14.0,18.5,1008.5,60.0,9.0,78,Heavy Rain,Medium,24.6,MEDIUM
+2025-09-10,Hyderabad,Telangana,29.2,78.0,25.0,85.0,1001.0,88.0,5.5,92,Flood,High,61.8,HIGH
+2025-04-20,Jaipur,Rajasthan,46.8,15.0,30.0,0.0,1015.0,5.0,12.0,65,Heatwave,Critical,2.1,CRITICAL
+2025-11-08,Bhubaneswar,Odisha,26.5,75.0,155.0,18.0,982.0,95.0,3.0,85,Cyclone,Critical,42.5,CRITICAL
+2025-10-15,Shimla,Himachal,8.2,65.0,35.0,55.0,920.0,80.0,6.0,18,Landslide,High,35.2,HIGH
+2025-03-28,Agartala,Tripura,31.5,85.0,18.0,0.0,1010.5,45.0,10.0,320,Air Quality,High,12.4,HIGH
+2025-07-30,Patna,Bihar,34.5,89.0,28.0,188.0,998.0,98.0,2.5,115,Flood,Critical,85.4,CRITICAL
+2025-06-22,Ahmedabad,Gujarat,42.5,32.0,22.0,0.0,1013.5,8.0,11.0,95,Heatwave,High,5.8,HIGH
+2025-08-18,Guwahati,Assam,28.5,90.0,20.0,245.0,1000.0,99.0,1.8,78,Flood,Critical,94.2,CRITICAL
+2025-05-28,Vishakhapatnam,AP,31.5,79.0,95.0,22.0,985.0,88.0,5.0,88,Cyclone,High,38.6,HIGH
+2025-09-02,Pune,Maharashtra,26.5,85.0,18.0,92.0,1006.5,90.0,6.5,68,Heavy Rain,Medium,48.5,MEDIUM
+2025-12-15,Delhi,Delhi,8.5,72.0,12.0,0.0,1020.0,35.0,1.2,450,Air Quality,Critical,3.2,CRITICAL
+2025-07-08,Ranchi,Jharkhand,29.5,88.0,22.0,145.0,1004.0,95.0,3.5,82,Flood,High,68.4,HIGH
+2025-06-10,Thiruvananthapuram,Kerala,28.8,90.0,38.0,185.0,1003.0,98.0,2.8,45,Flood,High,74.8,HIGH
+2025-04-05,Lucknow,UP,38.5,40.0,20.0,0.0,1014.0,15.0,9.5,180,Heatwave,Medium,4.5,MEDIUM
+2025-10-22,Panaji,Goa,30.5,80.0,72.0,35.0,990.0,85.0,6.0,42,Cyclone,Medium,32.8,MEDIUM
+2025-08-25,Dibrugarh,Assam,27.5,92.0,18.0,220.0,999.0,99.0,2.0,65,Flood,Critical,89.6,CRITICAL
+2025-05-15,Kozhikode,Kerala,30.8,86.0,28.0,78.0,1005.0,88.0,7.0,55,Heavy Rain,Medium,42.1,MEDIUM
+2025-11-20,Mangaluru,Karnataka,27.5,82.0,62.0,25.0,992.0,90.0,5.5,48,Cyclone,High,29.4,HIGH
+2025-03-10,Noida,UP,35.8,38.0,18.0,0.0,1012.5,22.0,3.5,385,Air Quality,High,3.8,HIGH
+2025-07-18,Imphal,Manipur,24.5,88.0,15.0,168.0,1005.0,97.0,3.8,35,Flood,High,71.2,HIGH
